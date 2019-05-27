@@ -9,7 +9,13 @@ for (const setName of Object.keys(standardJSON)) {
   const setTranslations = standardJSON[setName].translations
   const reducedCards = setCards.map((card) => {
     const foreignData = card.foreignData.map((card) => {
-      return { name: card.name, language: card.language }
+      return {
+        name: card.name,
+        language: card.language,
+        // added for split cards
+        layout: card.layout,
+        names: card.names
+      }
     })
     const reducedForeignData = {}
     for (const translation of foreignData) {
@@ -18,7 +24,10 @@ for (const setName of Object.keys(standardJSON)) {
     return {
       translations: reducedForeignData,
       name: card.name,
-      number: card.number
+      number: card.number,
+      // added for split cards
+      layout: card.layout,
+      names: card.names
     }
   }).filter((card) => {
     // Filtering mythic edition cards
@@ -31,6 +40,10 @@ for (const setName of Object.keys(standardJSON)) {
   const reducedSet = {
     name,
     cards: reducedCards,
+    // added for split cards
+    layout: card.layout,
+    names: card.names,
+
     translations: setTranslations
   }
   reducedSets.push(reducedSet)

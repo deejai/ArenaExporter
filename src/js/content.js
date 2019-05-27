@@ -2,6 +2,19 @@
 // possiblity of contaminating any scope.
 (() => {
   appendExtension()
+  // Using fuzzyset.js as a fallback to find cards from mispelled/malformed card names
+  var fuzzyset = FuzzySet()
+  const minMatchScore = .8
+  initFuzzySet()
+
+  // Load all magic card names from page data set into fuzzyset
+  function initFuzzySet() {
+    chrome.storage.local.get(null, function(cardNames) {
+      for(cardName in cardNames) {
+        fuzzyset.add(cardName)
+      }
+    })
+  }
 
   // Master function that handles all of the DOM injection needed for the extension's functionality.
   function appendExtension () {
@@ -80,6 +93,11 @@
 
   async function getDeckSection (container, language) {
     const cards = container.getElementsByClassName('row')
+    const cardNameArr = []
+    for(let card of cards) {
+      cardNameArr.push(card.getElementsByClassName('card-name')[0].textContent)
+    };
+    // console.log(cardNameArr)
     return new Promise(async (resolve, reject) => {
       const section = []
       for (let card of cards) {
@@ -101,19 +119,54 @@
     const count = cardContainer.getElementsByClassName('card-count')[0].textContent
     let name = cardContainer.getElementsByClassName('card-name')[0].textContent
     return new Promise((resolve, reject) => {
-      const lookupKey = name.split('//')[0].trim()
-      chrome.storage.local.get(lookupKey, function (data) {
-        if (Object.keys(data).includes(lookupKey)) {
-          const set = data[lookupKey].set
-          const number = data[lookupKey].number.replace(/\D/g, '')
-          if (language !== 'English') {
-            name = data[lookupKey].translations[language]
+      const splitTokenIndex = name.indexOf('//')
+      const cardString = name.replace('/\s\s+/g', ' ').trim()
+      const lookupResults = fuzzyset.get(cardString, null, minMatchScore)
+      const lookupKey = lookupResults == null ? null : lookupResults[0][1]
+      const matchStrength = lookupKey === null ? 0 : lookupResults[0][0]
+      if(name.includes('//')) {
+        debugger
+        console.log("//")
+      }
+      if(typeof(lookupKey) === 'string' &&  lookupKey.length > 0) {
+        chrome.storage.local.get(lookupKey, function (data) {
+          var test = Object.keys(data)
+          if (Object.keys(data).includes(lookupKey)) {
+            foundCard = true
+            const set = data[lookupKey].set
+            const number = data[lookupKey].number.replace(/\D/g, '')
+            if (language !== 'English') {
+              name = data[lookupKey].translations[language]
+            }
+            else if(matchStrength !== 1) {
+              name = lookupKey
+              // This is an attempt to reconstruct malformed split card names. Could possibly just always call name=data[lookupKey].translations[language]
+              if(splitTokenIndex != -1 && name.indexOf(' ') > 0) {
+                var closestSpaceIndex = -1
+                var closestSpaceDistance
+                var spaceIndices = []
+                const whitespace = ' \t\n\r\v'
+                for(var i=1; i<name.length; i++) {
+                  const ch = name.charAt(i)
+                  if(whitespace.includes(ch)) {
+                    const dist = abs(i-splitTokenIndex)
+                    if(closestSpaceIndex === -1 || dist < closestSpaceDistance) {
+                      closestSpaceDistance = dist
+                      closestSpaceIndex = i
+                    }
+                  }
+                }
+
+                name = name.slice(0, closestSpaceIndex) + ' //' + name.slice(closestSpaceIndex)
+              }
+            }
+            resolve(`${count} ${name} (${set}) ${number}`)
           }
-          resolve(`${count} ${name} (${set}) ${number}`)
-        } else {
-          reject(new Error(`Could not find card data for ${name}`))
-        }
-      })
+          else {
+            reject(new Error(`Could not find card data for ${name}`))
+          }
+        })
+      }
     })
   }
 
