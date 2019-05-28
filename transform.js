@@ -11,10 +11,7 @@ for (const setName of Object.keys(standardJSON)) {
     const foreignData = card.foreignData.map((card) => {
       return {
         name: card.name,
-        language: card.language,
-        // added for split cards
-        layout: card.layout,
-        names: card.names
+        language: card.language
       }
     })
     const reducedForeignData = {}
@@ -40,10 +37,6 @@ for (const setName of Object.keys(standardJSON)) {
   const reducedSet = {
     name,
     cards: reducedCards,
-    // added for split cards
-    layout: card.layout,
-    names: card.names,
-
     translations: setTranslations
   }
   reducedSets.push(reducedSet)

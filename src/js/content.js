@@ -3,7 +3,7 @@
 (() => {
   appendExtension()
   // Using fuzzyset.js as a fallback to find cards from mispelled/malformed card names
-  var fuzzyset = FuzzySet()
+  let fuzzyset = FuzzySet()
   const minMatchScore = .8
   initFuzzySet()
 
@@ -117,22 +117,14 @@
   // name to query local storage for set and id.
   async function getCardDetails (cardContainer, language) {
     const count = cardContainer.getElementsByClassName('card-count')[0].textContent
-    let name = cardContainer.getElementsByClassName('card-name')[0].textContent
+    let name = cardContainer.getElementsByClassName('card-name')[0].textContent.replace('/\s\s+/g', ' ').trim()
     return new Promise((resolve, reject) => {
-      const splitTokenIndex = name.indexOf('//')
-      const cardString = name.replace('/\s\s+/g', ' ').trim()
-      const lookupResults = fuzzyset.get(cardString, null, minMatchScore)
+      const lookupResults = fuzzyset.get(name, null, minMatchScore)
       const lookupKey = lookupResults == null ? null : lookupResults[0][1]
       const matchStrength = lookupKey === null ? 0 : lookupResults[0][0]
-      if(name.includes('//')) {
-        debugger
-        console.log("//")
-      }
       if(typeof(lookupKey) === 'string' &&  lookupKey.length > 0) {
         chrome.storage.local.get(lookupKey, function (data) {
-          var test = Object.keys(data)
           if (Object.keys(data).includes(lookupKey)) {
-            foundCard = true
             const set = data[lookupKey].set
             const number = data[lookupKey].number.replace(/\D/g, '')
             if (language !== 'English') {
@@ -140,25 +132,6 @@
             }
             else if(matchStrength !== 1) {
               name = lookupKey
-              // This is an attempt to reconstruct malformed split card names. Could possibly just always call name=data[lookupKey].translations[language]
-              if(splitTokenIndex != -1 && name.indexOf(' ') > 0) {
-                var closestSpaceIndex = -1
-                var closestSpaceDistance
-                var spaceIndices = []
-                const whitespace = ' \t\n\r\v'
-                for(var i=1; i<name.length; i++) {
-                  const ch = name.charAt(i)
-                  if(whitespace.includes(ch)) {
-                    const dist = abs(i-splitTokenIndex)
-                    if(closestSpaceIndex === -1 || dist < closestSpaceDistance) {
-                      closestSpaceDistance = dist
-                      closestSpaceIndex = i
-                    }
-                  }
-                }
-
-                name = name.slice(0, closestSpaceIndex) + ' //' + name.slice(closestSpaceIndex)
-              }
             }
             resolve(`${count} ${name} (${set}) ${number}`)
           }

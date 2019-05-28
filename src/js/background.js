@@ -15,9 +15,9 @@ async function initializeDatabase () {
 
     // Updated to fetch full names of split cards
     for (const card of set.cards) {
-      var cardKey
+      let cardKey
       if(card.layout == "split" && card.names.length == 2) {
-        cardKey = `${card.names[0]} + " // " + ${card.names[1]}`
+        cardKey = `${card.names[0]} // ${card.names[1]}`
       }
       else {
         cardKey = `${card.name}`
@@ -33,6 +33,7 @@ async function initializeDatabase () {
       }
     }
     chrome.storage.local.set(cards)
+    console.log(cards)
   }
   chrome.storage.local.set({ language: 'English' })
 }
